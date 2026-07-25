@@ -1,8 +1,10 @@
-backend/.venv/
+backend/venv/
 __pycache__/
 *.pyc
 
 simulation/output/
+resources
+INSTRUCTIONS.md
 
 .env
 
