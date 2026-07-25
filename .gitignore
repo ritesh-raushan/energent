@@ -1,0 +1,12 @@
+backend/.venv/
+__pycache__/
+*.pyc
+
+simulation/output/
+
+.env
+
+node_modules/
+dist/
+
+.vscode/
