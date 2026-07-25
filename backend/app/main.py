@@ -5,6 +5,8 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.health import router as health_router
+from app.api.router import api_router
 from app.config import settings
 from app.logging_config import setup_logging
 
@@ -35,5 +37,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.include_router(health_router)
+    app.include_router(api_router)
 
     return app
