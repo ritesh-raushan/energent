@@ -23,47 +23,47 @@
 ```mermaid
 flowchart TD
     subgraph FE[Frontend - React 19 + Vite + Tailwind + Recharts]
-        Dashboard[Dashboard<br/>Overview + Run Simulation]
-        Sim[Simulation<br/>Standard / Live Stream Mode]
-        Results[Results<br/>Charts + AI Refine]
-        ClosedLoop[Closed-Loop<br/>Loop / Agent Mode]
+        Dashboard[Dashboard\nOverview + Run Simulation]
+        Sim[Simulation\nStandard / Live Stream Mode]
+        Results[Results\nCharts + AI Refine]
+        ClosedLoop[Closed-Loop\nLoop / Agent Mode]
     end
 
     subgraph API[FastAPI Backend - Port 8000]
         Health[GET /health]
         SimAPI[POST /api/simulation/run]
-        StreamAPI[POST /api/simulation/start-stream<br/>GET /api/simulation/stream/{run_id}]
-        LLMAPI[POST /api/llm/refine<br/>POST /api/llm/ask]
+        StreamAPI[POST /api/simulation/start-stream\nGET /api/simulation/stream/run_id]
+        LLMAPI[POST /api/llm/refine\nPOST /api/llm/ask]
         LoopAPI[POST /api/loop/run]
         AgentAPI[POST /api/agent/run]
     end
 
     subgraph MCP[MCP Tool Layer]
-        ParseIDF[parse_idf<br/>Extract setpoints]
-        RunSim[run_simulation<br/>EnergyPlus subprocess]
-        Analyze[analyze_results<br/>CSV to Energy + PMV/PPD]
-        Modify[modify_setpoints<br/>Regex IDF rewrite]
-        GenECM[generate_ecms<br/>LLM/Rule-based]
-        GetErr[get_errors<br/>Parse .err files]
+        ParseIDF[parse_idf\nExtract setpoints]
+        RunSim[run_simulation\nEnergyPlus subprocess]
+        Analyze[analyze_results\nCSV to Energy + PMV/PPD]
+        Modify[modify_setpoints\nRegex IDF rewrite]
+        GenECM[generate_ecms\nLLM/Rule-based]
+        GetErr[get_errors\nParse .err files]
     end
 
     subgraph Agent[IterativeAgent - Autonomous Loop]
         Round1[Round 1: Baseline to ECM to Optimized]
         Round2[Round 2: Optimized to ECM to Re-optimized]
         RoundN[... until convergence]
-        Conv[[Convergence Check<br/>Energy improvement < 1 kWh<br/>PMV in [-0.5, 0.5]<br/>PPD < 10%<br/>Max 5 rounds]]
+        Conv[Convergence Check\nEnergy improvement less than 1 kWh\nPMV in range -0.5 to 0.5\nPPD less than 10%\nMax 5 rounds]
     end
 
     subgraph LLM[LLM Provider - OpenRouter / Local]
-        Model[openai/gpt-oss-20b:free<br/>or local Ollama/qwen]
-        Tools[Function Calling<br/>Tool Schema Registry]
+        Model[openai/gpt-oss-20b:free\nor local Ollama/qwen]
+        Tools[Function Calling\nTool Schema Registry]
     end
 
     subgraph EP[EnergyPlus Engine]
-        IDF[(IDF Model<br/>Small Office Chicago)]
-        EPW[(Weather<br/>Chicago TMY3)]
-        CSV[(eplusout.csv<br/>Time-series output)]
-        ERR[(eplusout.err<br/>Errors/Warnings)]
+        IDF[IDF Model\nSmall Office Chicago]
+        EPW[Weather\nChicago TMY3]
+        CSV[eplusout.csv\nTime-series output]
+        ERR[eplusout.err\nErrors/Warnings]
     end
 
     FE -->|/api proxy| API
