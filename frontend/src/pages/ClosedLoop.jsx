@@ -378,6 +378,13 @@ export default function ClosedLoop() {
           <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p className="text-lg">Run the closed-loop optimization</p>
           <p className="text-sm mt-1">Choose Loop (fixed pipeline) or Agent (autonomous multi-round optimization)</p>
+          <button
+            onClick={handleRun}
+            className="mt-6 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition-colors flex items-center gap-2 mx-auto"
+          >
+            <Play className="w-5 h-5" />
+            Run {mode === 'agent' ? 'Agent' : 'Loop'}
+          </button>
         </div>
       )}
     </div>
