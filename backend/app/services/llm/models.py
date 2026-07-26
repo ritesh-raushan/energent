@@ -3,13 +3,16 @@ from pydantic import BaseModel, Field
 
 class LLMMessage(BaseModel):
     role: str
-    content: str
+    content: str | None = None
+    tool_call_id: str | None = None
+    tool_calls: list[dict] | None = None
 
 
 class LLMResponse(BaseModel):
-    content: str
+    content: str = ""
     model: str = ""
     usage: dict = Field(default_factory=dict)
+    tool_calls: list[dict] | None = None
 
 
 class RefinedRecommendation(BaseModel):

@@ -12,12 +12,27 @@ logger = logging.getLogger(__name__)
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
+def _message_to_dict(m: LLMMessage) -> dict:
+    msg = {"role": m.role, "content": m.content}
+    if m.role == "tool" and m.tool_call_id:
+        msg["tool_call_id"] = m.tool_call_id
+    if m.role == "assistant" and m.tool_calls:
+        msg["tool_calls"] = m.tool_calls
+    return msg
+
+
 class OpenRouterProvider(LLMProvider):
     def __init__(self) -> None:
         self.api_key = settings.OPENROUTER_API_KEY
         self.model = settings.OPENROUTER_MODEL
 
-    def chat(self, messages: list[LLMMessage], temperature: float = 0.7) -> LLMResponse:
+    def chat(
+        self,
+        messages: list[LLMMessage],
+        temperature: float = 0.7,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> LLMResponse:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -25,11 +40,16 @@ class OpenRouterProvider(LLMProvider):
 
         payload = {
             "model": self.model,
-            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "messages": [_message_to_dict(m) for m in messages],
             "temperature": temperature,
         }
 
-        logger.info("Calling OpenRouter API with model=%s", self.model)
+        if tools:
+            payload["tools"] = tools
+        if tool_choice:
+            payload["tool_choice"] = tool_choice
+
+        logger.info("Calling OpenRouter API with model=%s, tools=%s", self.model, len(tools) if tools else 0)
 
         try:
             response = httpx.post(
@@ -41,13 +61,16 @@ class OpenRouterProvider(LLMProvider):
             response.raise_for_status()
             data = response.json()
 
-            content = data["choices"][0]["message"]["content"]
+            choice = data["choices"][0]["message"]
+            content = choice.get("content") or ""
+            tool_calls = choice.get("tool_calls")
             usage = data.get("usage", {})
 
             return LLMResponse(
                 content=content,
                 model=self.model,
                 usage=usage,
+                tool_calls=tool_calls,
             )
 
         except httpx.HTTPStatusError as e:
