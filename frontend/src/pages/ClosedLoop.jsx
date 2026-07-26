@@ -1,18 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Play, Loader2, TrendingDown, Zap, Brain, Terminal, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
+import { ArrowLeft, Play, Loader2, TrendingDown, Zap, Brain, Terminal, CheckCircle, AlertCircle, ChevronDown, ChevronUp, BarChart2, RefreshCw } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, LineChart, Line, AreaChart, Area } from 'recharts'
 
 const API_BASE = '/api'
 
 export default function ClosedLoop() {
   const navigate = useNavigate()
-  const [mode, setMode] = useState('loop')
+  const [mode, setMode] = useState('agent')
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [agentSteps, setAgentSteps] = useState([])
-  const [currentStep, setCurrentStep] = useState(0)
   const [expandedSteps, setExpandedSteps] = useState(new Set())
 
   useEffect(() => {
@@ -31,17 +30,17 @@ export default function ClosedLoop() {
     setError(null)
     setResult(null)
     setAgentSteps([])
-    setCurrentStep(0)
     setExpandedSteps(new Set())
 
     const endpoint = mode === 'agent' ? '/agent/run' : '/loop/run'
     const payload = mode === 'agent' ? {
-      objective: 'Run closed-loop building energy optimization',
+      objective: 'Run multi-round iterative building energy optimization',
       context: {
-        idf_path: 'simulation/idf/RefBldgSmallOfficeNew2004_Chicago.idf',
-        weather_path: 'simulation/weather/USA_IL_Chicago-OHare.Intl.AP.725300_TMY3.epw',
+        idf_path: '/home/riteshwsl/projects/energent/simulation/idf/RefBldgSmallOfficeNew2004_Chicago.idf',
+        weather_path: '/home/riteshwsl/projects/energent/simulation/weather/USA_IL_Chicago-OHare.Intl.AP.725300_TMY3.epw',
         output_dir: '/mnt/c/EnergentOutput',
       },
+      max_rounds: 5,
     } : {}
 
     try {
@@ -58,11 +57,14 @@ export default function ClosedLoop() {
 
       if (mode === 'agent') {
         setAgentSteps(data.steps || [])
+        const rounds = data.rounds || []
+        const lastRound = rounds[rounds.length - 1]
         setResult({
-          savings: data.final_result?.savings || data.steps?.[data.steps.length - 1]?.result || {},
+          savings: data.final_result || {},
+          rounds: rounds,
           ecm: data.steps?.find(s => s.tool === 'generate_ecms')?.result || {},
           baseline: data.steps?.find(s => s.tool === 'analyze_results' && s.iteration === 1)?.result || {},
-          optimized: data.steps?.find(s => s.tool === 'analyze_results' && s.iteration > 1)?.result || {},
+          optimized: data.steps?.find(s => s.tool === 'analyze_results' && s.round && s.round === rounds.length)?.result || {},
         })
       } else {
         setResult(data)
@@ -75,18 +77,19 @@ export default function ClosedLoop() {
     }
   }
 
-  const comparisonData = (result?.baseline?.summary && result?.optimized?.summary) ? [
-    { name: 'Heating', baseline: result.baseline.summary.heating_kwh, optimized: result.optimized.summary.heating_kwh },
-    { name: 'Cooling', baseline: result.baseline.summary.cooling_kwh, optimized: result.optimized.summary.cooling_kwh },
-    { name: 'Fans', baseline: result.baseline.summary.fans_kwh, optimized: result.optimized.summary.fans_kwh },
-    { name: 'Lighting', baseline: result.baseline.summary.lighting_kwh, optimized: result.optimized.summary.lighting_kwh },
-    { name: 'Equipment', baseline: result.baseline.summary.equipment_kwh, optimized: result.optimized.summary.equipment_kwh },
-  ] : []
-
   const comfortData = (result?.baseline?.thermal_comfort && result?.optimized?.thermal_comfort) ? [
     { name: 'PMV', baseline: result.baseline.thermal_comfort.pmv, optimized: result.optimized.thermal_comfort.pmv },
     { name: 'PPD %', baseline: result.baseline.thermal_comfort.ppd, optimized: result.optimized.thermal_comfort.ppd },
   ] : []
+
+  const roundHistory = result?.rounds || []
+  const savingsHistory = roundHistory.map(r => ({
+    round: r.round_number,
+    savings_kwh: r.energy_savings_kwh,
+    savings_pct: r.energy_savings_pct,
+    pmv_change: r.pmv_change,
+    ppd_change: r.ppd_change,
+  }))
 
   const toggleStep = (idx) => {
     setExpandedSteps(prev => {
@@ -122,7 +125,7 @@ export default function ClosedLoop() {
             disabled={running}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${mode === 'agent' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
           >
-            <Brain className="w-4 h-4 inline mr-1" /> Agent
+            <Brain className="w-4 h-4 inline mr-1" /> Agent (Iterative)
           </button>
         </div>
       </div>
@@ -137,7 +140,7 @@ export default function ClosedLoop() {
             <Loader2 className="w-10 h-10 text-emerald-400 animate-spin" />
             <div>
               <h2 className="text-xl font-semibold text-white">
-                {mode === 'agent' ? 'Agent Running Closed-Loop Optimization' : 'Running Closed-Loop Optimization'}
+                {mode === 'agent' ? 'Agent Running Multi-Round Optimization' : 'Running Closed-Loop Optimization'}
               </h2>
               <p className="text-gray-400 text-sm">This runs EnergyPlus simulations and may take several minutes...</p>
             </div>
@@ -160,7 +163,7 @@ export default function ClosedLoop() {
                       </span>
                       <div>
                         <p className="font-medium text-white">{step.tool}</p>
-                        <p className="text-gray-500 text-sm">Iteration {step.iteration}</p>
+                        <p className="text-gray-500 text-sm">Round {step.round}, Iteration {step.iteration}</p>
                       </div>
                     </div>
                     <button
@@ -210,16 +213,56 @@ export default function ClosedLoop() {
               <TrendingDown className="w-8 h-8 text-emerald-400" />
               <div>
                 <h2 className="text-2xl font-bold text-white">
-                  {result.savings?.percent || result.savings?.energy_savings_pct || 'N/A'}% Energy Savings
+                  {result.savings?.total_energy_savings_pct || result.savings?.final_energy_savings_pct || result.savings?.percent || result.savings?.energy_savings_pct || 'N/A'}% Energy Savings
                 </h2>
                 <p className="text-emerald-400">
-                  {result.savings?.baseline_kwh || result.savings?.baseline_kwh} kWh →
-                  {result.savings?.optimized_kwh || result.savings?.optimized_kwh} kWh
-                  ({result.savings?.kwh || result.savings?.energy_savings_kwh || 'N/A'} kWh saved)
+                  {result.savings?.total_energy_savings_kwh || result.savings?.final_energy_savings_kwh || result.savings?.kwh || result.savings?.energy_savings_kwh || 'N/A'} kWh saved over {result.savings?.total_rounds || roundHistory.length} rounds
                 </p>
               </div>
             </div>
           </div>
+
+          {mode === 'agent' && roundHistory.length > 0 && (
+            <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <BarChart2 className="w-5 h-5" />
+                Iteration History ({roundHistory.length} rounds)
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={savingsHistory}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="round" stroke="#9ca3af" fontSize={12} name="Round" />
+                  <YAxis yAxisId="left" stroke="#9ca3af" fontSize={12} orientation="left" />
+                  <YAxis yAxisId="right" stroke="#9ca3af" fontSize={12} orientation="right" domain={[0, 10]} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                    formatter={(value, name) => [value, name]}
+                  />
+                  <Legend />
+                  <Bar dataKey="savings_kwh" name="Energy Savings (kWh)" fill="#10b981" radius={[4, 4, 0, 0]} yAxisId="left" />
+                  <Line dataKey="savings_pct" name="Savings %" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} yAxisId="right" />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
+                <div className="bg-gray-800 rounded-lg p-3">
+                  <span className="text-gray-400">Total Savings:</span>
+                  <span className="text-emerald-400 font-bold ml-2">{result.savings?.total_energy_savings_kwh || savingsHistory.reduce((a,b) => a + b.savings_kwh, 0)} kWh</span>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3">
+                  <span className="text-gray-400">Best Round:</span>
+                  <span className="text-emerald-400 font-bold ml-2">{result.savings?.best_round || savingsHistory.reduce((best, curr) => curr.savings_kwh > best.savings_kwh ? curr : best, {round: 0}).round}</span>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3">
+                  <span className="text-gray-400">Converged:</span>
+                  <span className="text-emerald-400 font-bold ml-2">{result.savings?.converged ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3">
+                  <span className="text-gray-400">Reason:</span>
+                  <span className="text-white ml-2">{result.savings?.convergence_reason || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6">
             <h3 className="text-lg font-semibold text-white mb-4">Setpoint Changes</h3>
@@ -243,7 +286,13 @@ export default function ClosedLoop() {
           <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6">
             <h3 className="text-lg font-semibold text-white mb-4">Baseline vs Optimized</h3>
             <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={comparisonData}>
+              <BarChart data={[
+                { name: 'Heating', baseline: result.baseline?.summary?.heating_kwh || 0, optimized: result.optimized?.summary?.heating_kwh || 0 },
+                { name: 'Cooling', baseline: result.baseline?.summary?.cooling_kwh || 0, optimized: result.optimized?.summary?.cooling_kwh || 0 },
+                { name: 'Fans', baseline: result.baseline?.summary?.fans_kwh || 0, optimized: result.optimized?.summary?.fans_kwh || 0 },
+                { name: 'Lighting', baseline: result.baseline?.summary?.lighting_kwh || 0, optimized: result.optimized?.summary?.lighting_kwh || 0 },
+                { name: 'Equipment', baseline: result.baseline?.summary?.equipment_kwh || 0, optimized: result.optimized?.summary?.equipment_kwh || 0 },
+              ]}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
                 <YAxis stroke="#9ca3af" fontSize={12} />
@@ -328,7 +377,7 @@ export default function ClosedLoop() {
         <div className="text-center py-20 text-gray-500">
           <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p className="text-lg">Run the closed-loop optimization</p>
-          <p className="text-sm mt-1">Choose Loop (fixed pipeline) or Agent (autonomous tool-calling)</p>
+          <p className="text-sm mt-1">Choose Loop (fixed pipeline) or Agent (autonomous multi-round optimization)</p>
         </div>
       )}
     </div>
