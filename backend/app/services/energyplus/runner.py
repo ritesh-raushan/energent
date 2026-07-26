@@ -8,6 +8,22 @@ from app.services.energyplus.models import SimulationConfig, SimulationResult
 logger = logging.getLogger(__name__)
 
 
+def to_windows_path(path: Path) -> str:
+    abs_path = str(path.resolve())
+    try:
+        result = subprocess.run(
+            ["wslpath", "-w", abs_path],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return abs_path
+
+
 class EnergyPlusRunner:
     def __init__(self, config: SimulationConfig | None = None) -> None:
         self.config = config or self._default_config()
@@ -26,9 +42,9 @@ class EnergyPlusRunner:
 
         cmd = [
             str(self.config.energyplus_exe),
-            "-w", str(self.config.weather_path),
-            "-d", str(self.config.output_dir),
-            str(self.config.idf_path),
+            "-w", to_windows_path(self.config.weather_path),
+            "-d", to_windows_path(self.config.output_dir),
+            to_windows_path(self.config.idf_path),
         ]
 
         logger.info("Running EnergyPlus simulation: %s", " ".join(cmd))
@@ -40,6 +56,12 @@ class EnergyPlusRunner:
                 text=True,
                 timeout=settings.ENERGYPLUS_TIMEOUT,
             )
+
+            logger.info("EnergyPlus returned code: %d", result.returncode)
+            if result.stdout:
+                logger.info("stdout: %s", result.stdout[:500])
+            if result.stderr:
+                logger.warning("stderr: %s", result.stderr[:500])
 
             csv_path = self._find_csv_output()
 

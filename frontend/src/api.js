@@ -1,10 +1,16 @@
 const API_BASE = '/api'
 
+function extractError(err) {
+  if (typeof err.detail === 'string') return err.detail
+  if (err.detail?.message) return err.detail.message
+  return 'An error occurred'
+}
+
 export async function runSimulation() {
   const res = await fetch(`${API_BASE}/simulation/run`, { method: 'POST' })
   if (!res.ok) {
     const err = await res.json()
-    throw new Error(err.detail || 'Simulation failed')
+    throw new Error(extractError(err))
   }
   return res.json()
 }
@@ -17,7 +23,7 @@ export async function refineRecommendations(analysis) {
   })
   if (!res.ok) {
     const err = await res.json()
-    throw new Error(err.detail || 'LLM refinement failed')
+    throw new Error(extractError(err))
   }
   return res.json()
 }
@@ -30,7 +36,7 @@ export async function askLLM(analysis, question) {
   })
   if (!res.ok) {
     const err = await res.json()
-    throw new Error(err.detail || 'LLM request failed')
+    throw new Error(extractError(err))
   }
   return res.json()
 }
