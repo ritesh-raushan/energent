@@ -185,9 +185,9 @@ export default function Results() {
             <p className="text-gray-400 text-sm mt-1">Status</p>
           </div>
           <div className="text-center p-4 bg-gray-800 rounded-xl">
-            <p className="text-3xl font-bold text-white">{analysis.thermal_comfort.air_temperature_c}°C</p>
+            <p className="text-3xl font-bold text-white">{Number(analysis.thermal_comfort.air_temperature_c).toFixed(5)}°C</p>
             <p className="text-gray-400 text-sm mt-1">Air Temp</p>
-            <p className="text-gray-500 text-xs mt-1">MRT: {analysis.thermal_comfort.mean_radiant_temperature_c}°C</p>
+            <p className="text-gray-500 text-xs mt-1">MRT: {Number(analysis.thermal_comfort.air_temperature_c).toFixed(5)}°C</p>
           </div>
         </div>
       </div>

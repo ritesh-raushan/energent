@@ -15,14 +15,9 @@ export default function ClosedLoop() {
   const [expandedSteps, setExpandedSteps] = useState(new Set())
 
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem('lastLoop')
-      if (stored) {
-        setResult(JSON.parse(stored))
-      }
-    } catch (e) {
-      sessionStorage.removeItem('lastLoop')
-    }
+    // Clear stale cache on mount so Run button always shows
+    sessionStorage.removeItem('lastLoop')
+    setResult(null)
   }, [])
 
   const handleRun = async () => {
@@ -59,15 +54,77 @@ export default function ClosedLoop() {
         setAgentSteps(data.steps || [])
         const rounds = data.rounds || []
         const lastRound = rounds[rounds.length - 1]
+        const firstBaseline = data.steps?.find(s => s.tool === 'analyze_results' && s.iteration === 1)?.result || {}
+        const lastOptimized = data.steps?.find(s => s.tool === 'analyze_results' && s.round && s.round === rounds.length)?.result || {}
+        const ecmResult = data.steps?.find(s => s.tool === 'generate_ecms')?.result || {}
+        
+        // Normalize to consistent structure
         setResult({
+          mode: 'agent',
           savings: data.final_result || {},
           rounds: rounds,
-          ecm: data.steps?.find(s => s.tool === 'generate_ecms')?.result || {},
-          baseline: data.steps?.find(s => s.tool === 'analyze_results' && s.iteration === 1)?.result || {},
-          optimized: data.steps?.find(s => s.tool === 'analyze_results' && s.round && s.round === rounds.length)?.result || {},
+          ecm: ecmResult,
+          baseline: {
+            summary: firstBaseline?.energy_breakdown || {},
+            thermal_comfort: firstBaseline?.thermal_comfort || {},
+            score: firstBaseline?.overall_score || 0
+          },
+          optimized: {
+            summary: lastOptimized?.energy_breakdown || {},
+            thermal_comfort: lastOptimized?.thermal_comfort || {},
+            score: lastOptimized?.overall_score || 0
+          }
         })
       } else {
-        setResult(data)
+        // Loop mode - normalize
+        setResult({
+          mode: 'loop',
+          savings: {
+            percent: data.savings?.percent,
+            energy_savings_pct: data.savings?.percent,
+            energy_savings_kwh: data.savings?.kwh,
+            total_energy_savings_kwh: data.savings?.kwh,
+            total_energy_savings_pct: data.savings?.percent
+          },
+          rounds: [],
+          ecm: {
+            heating_occupied_c: data.ecm?.heating_occupied_c,
+            cooling_occupied_c: data.ecm?.cooling_occupied_c,
+            reasoning: data.ecm?.reasoning
+          },
+          baseline: {
+            summary: {
+              heating_kwh: data.baseline?.summary?.heating_kwh,
+              cooling_kwh: data.baseline?.summary?.cooling_kwh,
+              fans_kwh: data.baseline?.summary?.fans_kwh,
+              lighting_kwh: data.baseline?.summary?.lighting_kwh,
+              equipment_kwh: data.baseline?.summary?.equipment_kwh,
+              heating_pct: data.baseline?.summary?.heating_pct,
+              cooling_pct: data.baseline?.summary?.cooling_pct,
+              fans_pct: data.baseline?.summary?.fans_pct,
+              lighting_pct: data.baseline?.summary?.lighting_pct,
+              equipment_pct: data.baseline?.summary?.equipment_pct,
+            },
+            thermal_comfort: data.baseline?.thermal_comfort,
+            score: data.baseline?.score
+          },
+          optimized: {
+            summary: {
+              heating_kwh: data.optimized?.summary?.heating_kwh,
+              cooling_kwh: data.optimized?.summary?.cooling_kwh,
+              fans_kwh: data.optimized?.summary?.fans_kwh,
+              lighting_kwh: data.optimized?.summary?.lighting_kwh,
+              equipment_kwh: data.optimized?.summary?.equipment_kwh,
+              heating_pct: data.optimized?.summary?.heating_pct,
+              cooling_pct: data.optimized?.summary?.cooling_pct,
+              fans_pct: data.optimized?.summary?.fans_pct,
+              lighting_pct: data.optimized?.summary?.lighting_pct,
+              equipment_pct: data.optimized?.summary?.equipment_pct,
+            },
+            thermal_comfort: data.optimized?.thermal_comfort,
+            score: data.optimized?.score
+          }
+        })
       }
       sessionStorage.setItem('lastLoop', JSON.stringify(data))
     } catch (err) {
@@ -371,6 +428,19 @@ export default function ClosedLoop() {
             </div>
           </div>
         </>
+      )}
+
+      {result && (
+        <div className="mt-6 text-center">
+          <button
+            onClick={handleRun}
+            disabled={running}
+            className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors flex items-center gap-2 mx-auto"
+          >
+            <RefreshCw className="w-5 h-5" />
+            Run Again ({mode === 'agent' ? 'Agent' : 'Loop'})
+          </button>
+        </div>
       )}
 
       {!result && !running && (
