@@ -1,10 +1,11 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Play, BarChart3, Zap } from 'lucide-react'
+import { LayoutDashboard, Play, BarChart3, Zap, Cpu } from 'lucide-react'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/simulation', icon: Play, label: 'Simulation' },
   { to: '/results', icon: BarChart3, label: 'Results' },
+  { to: '/closed-loop', icon: Cpu, label: 'Closed-Loop' },
 ]
 
 export default function Layout() {
