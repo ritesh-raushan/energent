@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from app.services.analysis.thermal_comfort import ThermalComfort
+
 
 class EnergyBreakdown(BaseModel):
     heating_kwh: float = 0.0
@@ -54,6 +56,7 @@ class AnalysisResult(BaseModel):
     energy_breakdown: EnergyBreakdown = Field(default_factory=EnergyBreakdown)
     peak_load: PeakLoadAnalysis = Field(default_factory=PeakLoadAnalysis)
     hvac_summary: HVACSummary = Field(default_factory=HVACSummary)
+    thermal_comfort: ThermalComfort = Field(default_factory=ThermalComfort)
     recommendations: list[Recommendation] = Field(default_factory=list)
     overall_score: float = 0.0
     total_potential_savings_kwh: float = 0.0

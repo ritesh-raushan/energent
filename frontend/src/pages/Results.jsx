@@ -163,6 +163,35 @@ export default function Results() {
         </div>
       </div>
 
+      <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">Thermal Comfort (Fanger PMV/PPD)</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="text-center p-4 bg-gray-800 rounded-xl">
+            <p className={`text-3xl font-bold ${Math.abs(analysis.thermal_comfort.pmv) <= 0.5 ? 'text-emerald-400' : Math.abs(analysis.thermal_comfort.pmv) <= 1.0 ? 'text-yellow-400' : 'text-red-400'}`}>
+              {analysis.thermal_comfort.pmv}
+            </p>
+            <p className="text-gray-400 text-sm mt-1">PMV</p>
+            <p className="text-gray-500 text-xs mt-1">-3 cold → +3 hot</p>
+          </div>
+          <div className="text-center p-4 bg-gray-800 rounded-xl">
+            <p className={`text-3xl font-bold ${analysis.thermal_comfort.ppd <= 10 ? 'text-emerald-400' : analysis.thermal_comfort.ppd <= 20 ? 'text-yellow-400' : 'text-red-400'}`}>
+              {analysis.thermal_comfort.ppd}%
+            </p>
+            <p className="text-gray-400 text-sm mt-1">PPD</p>
+            <p className="text-gray-500 text-xs mt-1">target {'<'} 10%</p>
+          </div>
+          <div className="text-center p-4 bg-gray-800 rounded-xl">
+            <p className="text-3xl font-bold text-blue-400 capitalize">{analysis.thermal_comfort.comfort_status}</p>
+            <p className="text-gray-400 text-sm mt-1">Status</p>
+          </div>
+          <div className="text-center p-4 bg-gray-800 rounded-xl">
+            <p className="text-3xl font-bold text-white">{analysis.thermal_comfort.air_temperature_c}°C</p>
+            <p className="text-gray-400 text-sm mt-1">Air Temp</p>
+            <p className="text-gray-500 text-xs mt-1">MRT: {analysis.thermal_comfort.mean_radiant_temperature_c}°C</p>
+          </div>
+        </div>
+      </div>
+
       {refined ? (
         <div>
           <h2 className="text-xl font-semibold text-white mb-4">AI-Refined Recommendations</h2>

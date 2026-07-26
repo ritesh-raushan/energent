@@ -9,6 +9,7 @@ def build_analysis_prompt(analysis: AnalysisResult) -> list[LLMMessage]:
         "energy_breakdown": analysis.energy_breakdown.model_dump(),
         "peak_load": analysis.peak_load.model_dump(),
         "hvac_summary": analysis.hvac_summary.model_dump(),
+        "thermal_comfort": analysis.thermal_comfort.model_dump(),
         "overall_score": analysis.overall_score,
         "total_potential_savings_kwh": analysis.total_potential_savings_kwh,
     }
@@ -32,7 +33,10 @@ Your recommendations must be:
 2. Based on the actual data provided
 3. Prioritized by potential energy savings
 4. Include concrete implementation steps
-5. Consider both energy savings and occupant comfort
+5. Consider both energy savings and occupant thermal comfort (PMV/PPD)
+
+The PMV (Predicted Mean Vote) scale ranges from -3 (cold) to +3 (hot), with 0 being neutral.
+PPD (Predicted Percentage Dissatisfied) should be below 10% for acceptable comfort.
 
 Always respond in valid JSON format."""
 
@@ -46,9 +50,10 @@ Always respond in valid JSON format."""
 
 ## Instructions
 1. Review the rule-based recommendations and refine them with more specific details
-2. Add any additional insights the data suggests
-3. Provide an overall assessment of the building's energy performance
-4. Suggest the top 3-5 most impactful actions with estimated savings
+2. Consider thermal comfort (PMV/PPD) in your recommendations - energy savings should not come at the expense of occupant comfort
+3. Add any additional insights the data suggests
+4. Provide an overall assessment of the building's energy performance and comfort levels
+5. Suggest the top 3-5 most impactful actions with estimated savings
 
 Respond with JSON in this exact format:
 {{
@@ -59,7 +64,7 @@ Respond with JSON in this exact format:
       "refined_title": "More specific refined title",
       "refined_description": "Detailed actionable description with specific steps",
       "priority": "high/medium/low",
-      "category": "HVAC/Lighting/Load Management/etc",
+      "category": "HVAC/Lighting/Load Management/Thermal Comfort/etc",
       "action_items": ["Step 1", "Step 2", "Step 3"],
       "estimated_impact": "Description of expected impact"
     }}
@@ -81,13 +86,15 @@ def build_refinement_prompt(
         "energy_breakdown": analysis.energy_breakdown.model_dump(),
         "peak_load": analysis.peak_load.model_dump(),
         "hvac_summary": analysis.hvac_summary.model_dump(),
+        "thermal_comfort": analysis.thermal_comfort.model_dump(),
         "overall_score": analysis.overall_score,
     }
 
     system_prompt = """You are an expert building energy analyst AI. You answer questions about
 building energy simulation data and provide specific, actionable advice.
 
-Be concise but thorough. Reference the actual data when making recommendations."""
+Be concise but thorough. Reference the actual data when making recommendations.
+Consider both energy efficiency and thermal comfort (PMV/PPD) in your advice."""
 
     user_prompt = f"""Building energy simulation data:
 {json.dumps(summary_data, indent=2)}

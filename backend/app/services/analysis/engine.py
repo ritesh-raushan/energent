@@ -8,6 +8,7 @@ from app.services.analysis.models import (
     PeakLoadAnalysis,
     Recommendation,
 )
+from app.services.analysis.thermal_comfort import calculate_pmv
 from app.services.energyplus.models import ParsedSimulationData
 
 logger = logging.getLogger(__name__)
@@ -19,15 +20,17 @@ def analyze(data: ParsedSimulationData) -> AnalysisResult:
     breakdown = _energy_breakdown(data)
     peak = _peak_load_analysis(data)
     hvac = _hvac_summary(data)
-    recommendations = _generate_recommendations(breakdown, peak, hvac, data)
+    thermal = _compute_thermal_comfort(data)
+    recommendations = _generate_recommendations(breakdown, peak, hvac, thermal, data)
 
     total_savings = sum(r.estimated_savings_kwh for r in recommendations)
-    score = _compute_score(breakdown, peak, hvac)
+    score = _compute_score(breakdown, peak, hvac, thermal)
 
     return AnalysisResult(
         energy_breakdown=breakdown,
         peak_load=peak,
         hvac_summary=hvac,
+        thermal_comfort=thermal,
         recommendations=recommendations,
         overall_score=round(score, 1),
         total_potential_savings_kwh=round(total_savings, 2),
@@ -130,10 +133,39 @@ def _hvac_summary(data: ParsedSimulationData) -> HVACSummary:
     )
 
 
+def _compute_thermal_comfort(data: ParsedSimulationData):
+    zone_temps = [r.zone_mean_air_temp_c for r in data.records if r.zone_mean_air_temp_c is not None]
+    if not zone_temps:
+        return calculate_pmv(22.0)
+
+    avg_temp = sum(zone_temps) / len(zone_temps)
+    outdoor_humidities = [r.outdoor_relative_humidity_pct for r in data.records if r.outdoor_relative_humidity_pct is not None]
+    avg_humidity = sum(outdoor_humidities) / len(outdoor_humidities) if outdoor_humidities else 50.0
+
+    heating_active = any((r.heating_electricity_j or 0.0) > 0 for r in data.records)
+    cooling_active = any((r.cooling_electricity_j or 0.0) > 0 for r in data.records)
+
+    if heating_active and not cooling_active:
+        clothing = 1.0
+    elif cooling_active and not heating_active:
+        clothing = 0.5
+    else:
+        clothing = 0.7
+
+    return calculate_pmv(
+        air_temperature_c=avg_temp,
+        relative_humidity_pct=avg_humidity,
+        air_velocity_ms=0.15,
+        metabolic_rate_met=1.2,
+        clothing_insulation_clo=clothing,
+    )
+
+
 def _generate_recommendations(
     breakdown: EnergyBreakdown,
     peak: PeakLoadAnalysis,
     hvac: HVACSummary,
+    thermal,
     data: ParsedSimulationData,
 ) -> list[Recommendation]:
     recs: list[Recommendation] = []
@@ -175,6 +207,22 @@ def _generate_recommendations(
             description=f"Average zone temperature is {hvac.avg_zone_temp_c}°C, below the {COMFORT_TEMP_MIN_C}°C lower comfort limit.",
         ))
 
+    if abs(thermal.pmv) > 1.0:
+        recs.append(Recommendation(
+            category="Thermal Comfort",
+            priority="high" if abs(thermal.pmv) > 2.0 else "medium",
+            title=f"PMV indicates {thermal.comfort_status} conditions",
+            description=f"Predicted Mean Vote is {thermal.pmv} ({thermal.comfort_status}) with {thermal.ppd}% dissatisfied occupants. Adjust setpoints or air velocity to improve comfort.",
+        ))
+
+    if thermal.ppd > 20:
+        recs.append(Recommendation(
+            category="Thermal Comfort",
+            priority="medium",
+            title="High predicted percentage of dissatisfied occupants",
+            description=f"PPD is {thermal.ppd}%, indicating significant occupant discomfort. Target PPD below 10% for acceptable comfort.",
+        ))
+
     if peak.load_factor < 0.5:
         savings = breakdown.total_electricity_kwh * 0.05
         recs.append(Recommendation(
@@ -211,7 +259,7 @@ def _generate_recommendations(
     outdoor_temps = [r.outdoor_temp_c for r in data.records if r.outdoor_temp_c is not None]
     if outdoor_temps:
         avg_outdoor = sum(outdoor_temps) / len(outdoor_temps)
-        if avg_outdoor > 15 and cooling_hours == 0 and heating_hours > 100:
+        if avg_outdoor > 15 and hvac.cooling_hours == 0 and hvac.heating_hours > 100:
             recs.append(Recommendation(
                 category="Optimization",
                 priority="high",
@@ -222,7 +270,7 @@ def _generate_recommendations(
     return recs
 
 
-def _compute_score(breakdown: EnergyBreakdown, peak: PeakLoadAnalysis, hvac: HVACSummary) -> float:
+def _compute_score(breakdown: EnergyBreakdown, peak: PeakLoadAnalysis, hvac: HVACSummary, thermal) -> float:
     score = 100.0
 
     if hvac.avg_zone_temp_c > 0:
@@ -230,6 +278,12 @@ def _compute_score(breakdown: EnergyBreakdown, peak: PeakLoadAnalysis, hvac: HVA
             score -= (COMFORT_TEMP_MIN_C - hvac.avg_zone_temp_c) * 5
         elif hvac.avg_zone_temp_c > COMFORT_TEMP_MAX_C:
             score -= (hvac.avg_zone_temp_c - COMFORT_TEMP_MAX_C) * 5
+
+    if abs(thermal.pmv) > 0.5:
+        score -= abs(thermal.pmv) * 10
+
+    if thermal.ppd > 10:
+        score -= (thermal.ppd - 10) * 0.5
 
     if peak.load_factor < 0.5:
         score -= (0.5 - peak.load_factor) * 20

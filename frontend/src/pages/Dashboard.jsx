@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Zap, Thermometer, Fan, Lightbulb, Flame, Activity } from 'lucide-react'
+import { Zap, Thermometer, Fan, Lightbulb, Flame, Activity, Heart } from 'lucide-react'
 import EnergyCard from '../components/EnergyCard'
 import RecommendationCard from '../components/RecommendationCard'
 import { runSimulation } from '../api'
@@ -87,6 +87,37 @@ export default function Dashboard() {
               unit="/100"
               icon={Zap}
               color="purple"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <EnergyCard
+              title="PMV"
+              value={data.analysis.thermal_comfort.pmv}
+              unit=""
+              icon={Heart}
+              color={Math.abs(data.analysis.thermal_comfort.pmv) <= 0.5 ? 'emerald' : Math.abs(data.analysis.thermal_comfort.pmv) <= 1.0 ? 'yellow' : 'red'}
+            />
+            <EnergyCard
+              title="PPD"
+              value={data.analysis.thermal_comfort.ppd}
+              unit="%"
+              icon={Heart}
+              color={data.analysis.thermal_comfort.ppd <= 10 ? 'emerald' : data.analysis.thermal_comfort.ppd <= 20 ? 'yellow' : 'red'}
+            />
+            <EnergyCard
+              title="Comfort"
+              value={data.analysis.thermal_comfort.comfort_status}
+              unit=""
+              icon={Thermometer}
+              color="blue"
+            />
+            <EnergyCard
+              title="Air Velocity"
+              value={data.analysis.thermal_comfort.air_velocity_ms}
+              unit="m/s"
+              icon={Fan}
+              color="emerald"
             />
           </div>
 
