@@ -8,7 +8,7 @@ class SimulationConfig(BaseModel):
     idf_path: Path
     weather_path: Path
     output_dir: Path
-    energyplus_exe: Path = Field(default_factory=lambda: Path("C:/EnergyPlus/EnergyPlus.exe"))
+    energyplus_exe: Path
 
 
 class SimulationResult(BaseModel):

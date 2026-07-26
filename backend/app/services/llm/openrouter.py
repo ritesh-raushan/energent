@@ -36,7 +36,7 @@ class OpenRouterProvider(LLMProvider):
                 OPENROUTER_API_URL,
                 headers=headers,
                 json=payload,
-                timeout=60.0,
+                timeout=settings.LLM_TIMEOUT,
             )
             response.raise_for_status()
             data = response.json()

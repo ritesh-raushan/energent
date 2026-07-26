@@ -12,11 +12,16 @@ export default function Results() {
   const [data, setData] = useState(null)
   const [refined, setRefined] = useState(null)
   const [refining, setRefining] = useState(false)
+  const [refineError, setRefineError] = useState(null)
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('lastSimulation')
-    if (stored) {
-      setData(JSON.parse(stored))
+    try {
+      const stored = sessionStorage.getItem('lastSimulation')
+      if (stored) {
+        setData(JSON.parse(stored))
+      }
+    } catch (e) {
+      sessionStorage.removeItem('lastSimulation')
     }
   }, [])
 
@@ -54,11 +59,12 @@ export default function Results() {
 
   const handleRefine = async () => {
     setRefining(true)
+    setRefineError(null)
     try {
       const result = await refineRecommendations(analysis)
       setRefined(result.result)
     } catch (err) {
-      console.error('Refinement failed:', err)
+      setRefineError(err.message)
     } finally {
       setRefining(false)
     }
@@ -88,6 +94,12 @@ export default function Results() {
           {refining ? 'Refining...' : 'AI Refine'}
         </button>
       </div>
+
+      {refineError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400">
+          {refineError}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6">

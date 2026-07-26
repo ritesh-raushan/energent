@@ -1,9 +1,10 @@
 backend/venv/
 __pycache__/
 *.pyc
+*.pyo
 
 simulation/output/
-resources
+resources/
 INSTRUCTIONS.md
 
 .env
@@ -12,3 +13,12 @@ node_modules/
 dist/
 
 .vscode/
+.idea/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+.DS_Store
+Thumbs.db

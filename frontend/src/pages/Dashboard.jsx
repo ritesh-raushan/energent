@@ -10,9 +10,13 @@ export default function Dashboard() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('lastSimulation')
-    if (stored) {
-      setData(JSON.parse(stored))
+    try {
+      const stored = sessionStorage.getItem('lastSimulation')
+      if (stored) {
+        setData(JSON.parse(stored))
+      }
+    } catch (e) {
+      sessionStorage.removeItem('lastSimulation')
     }
   }, [])
 

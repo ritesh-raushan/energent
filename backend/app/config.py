@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_MODEL: str = "qwen/qwen3-8b"
+    LLM_TIMEOUT: int = 60
 
     model_config = {
         "env_file": ".env",

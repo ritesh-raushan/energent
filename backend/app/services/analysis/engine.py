@@ -1,5 +1,6 @@
 import logging
 
+from app.constants import COMFORT_TEMP_MAX_C, COMFORT_TEMP_MIN_C, JOULES_PER_KWH
 from app.services.analysis.models import (
     AnalysisResult,
     EnergyBreakdown,
@@ -10,11 +11,6 @@ from app.services.analysis.models import (
 from app.services.energyplus.models import ParsedSimulationData
 
 logger = logging.getLogger(__name__)
-
-JOULES_PER_KWH = 3_600_000
-
-COMFORT_TEMP_MIN_C = 20.0
-COMFORT_TEMP_MAX_C = 24.0
 
 
 def analyze(data: ParsedSimulationData) -> AnalysisResult:

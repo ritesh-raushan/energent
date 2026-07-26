@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from app.constants import JOULES_PER_KWH
 from app.services.energyplus.models import (
     EnergyRecord,
     EnergySummary,
@@ -26,8 +27,6 @@ COLUMN_MAP = {
     "NaturalGas:Facility [J]": "natural_gas_facility_j",
     "Heating:NaturalGas [J]": "heating_natural_gas_j",
 }
-
-JOULES_PER_KWH = 3_600_000
 
 
 def parse_csv(csv_path: Path) -> ParsedSimulationData:
