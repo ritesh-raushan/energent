@@ -41,17 +41,17 @@ flowchart TD
     subgraph MCP[MCP Tool Layer]
         ParseIDF[parse_idf<br/>Extract setpoints]
         RunSim[run_simulation<br/>EnergyPlus subprocess]
-        Analyze[analyze_results<br/>CSV → Energy + PMV/PPD]
+        Analyze[analyze_results<br/>CSV to Energy + PMV/PPD]
         Modify[modify_setpoints<br/>Regex IDF rewrite]
         GenECM[generate_ecms<br/>LLM/Rule-based]
         GetErr[get_errors<br/>Parse .err files]
     end
 
     subgraph Agent[IterativeAgent - Autonomous Loop]
-        Round1[Round 1: Baseline → ECM → Optimized]
-        Round2[Round 2: Optimized → ECM → Re-optimized]
+        Round1[Round 1: Baseline to ECM to Optimized]
+        Round2[Round 2: Optimized to ECM to Re-optimized]
         RoundN[... until convergence]
-        Conv{Convergence?<br/>• ΔEnergy < 1 kWh<br/>• PMV ∈ [-0.5, 0.5]<br/>• PPD < 10%<br/>• Max 5 rounds}
+        Conv[[Convergence Check<br/>Energy improvement < 1 kWh<br/>PMV in [-0.5, 0.5]<br/>PPD < 10%<br/>Max 5 rounds]]
     end
 
     subgraph LLM[LLM Provider - OpenRouter / Local]
@@ -72,8 +72,8 @@ flowchart TD
     MCP --> EP
     MCP --> LLM
     Agent --> Conv
-    Conv -->|Yes| Done[Final Report]
-    Conv -->|No| RoundN
+    Conv -->|Converged| Done[Final Report]
+    Conv -->|Continue| RoundN
 
     classDef frontend fill:#1e293b,stroke:#06b6d4,color:#fff;
     classDef backend fill:#0f172a,stroke:#8b5cf6,color:#fff;
