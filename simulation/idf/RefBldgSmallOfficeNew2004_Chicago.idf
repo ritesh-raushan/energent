@@ -4990,3 +4990,14 @@
     ,                        !- Nuclear High Level Emission Factor Schedule Name
     0;                       !- Nuclear Low Level Emission Factor {m3/MJ}
 
+
+OutputControl:Files,
+    Yes,                   !- Output CSV
+    No,                    !- Output MTR
+    No,                    !- Output ESO
+    No,                    !- Output Audit
+    No,                    !- Output Zone Sizing
+    No,                    !- Output System Sizing
+    No,                    !- Output DXF
+    No,                    !- Output BND
+    ;                      !- Output RDD

@@ -1,4 +1,5 @@
 import logging
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -14,10 +15,14 @@ logger = logging.getLogger(__name__)
 
 COLUMN_MAP = {
     "Date/Time": "timestamp",
-    "Site Outdoor Air Drybulb Temperature [C]": "outdoor_temp_c",
-    "Site Outdoor Air Humidity Ratio [kg/kg]": "outdoor_humidity_ratio_kgkg",
-    "Site Outdoor Air Relative Humidity [%]": "outdoor_relative_humidity_pct",
-    "Zone Mean Air Temperature [C]": "zone_mean_air_temp_c",
+    "Environment:Site Outdoor Air Drybulb Temperature [C]": "outdoor_temp_c",
+    "Environment:Site Outdoor Air Humidity Ratio [kgWater/kgDryAir]": "outdoor_humidity_ratio_kgkg",
+    "Environment:Site Outdoor Air Relative Humidity [%]": "outdoor_relative_humidity_pct",
+    "CORE_ZN:Zone Mean Air Temperature [C]": "zone_mean_air_temp_c",
+    "PERIMETER_ZN_1:Zone Mean Air Temperature [C]": "zone_mean_air_temp_c",
+    "PERIMETER_ZN_2:Zone Mean Air Temperature [C]": "zone_mean_air_temp_c",
+    "PERIMETER_ZN_3:Zone Mean Air Temperature [C]": "zone_mean_air_temp_c",
+    "PERIMETER_ZN_4:Zone Mean Air Temperature [C]": "zone_mean_air_temp_c",
     "Electricity:Facility [J]": "electricity_facility_j",
     "Fans:Electricity [J]": "fans_electricity_j",
     "Cooling:Electricity [J]": "cooling_electricity_j",
@@ -27,6 +32,12 @@ COLUMN_MAP = {
     "NaturalGas:Facility [J]": "natural_gas_facility_j",
     "Heating:NaturalGas [J]": "heating_natural_gas_j",
 }
+
+
+def _normalize_column(col: str) -> str:
+    col = col.strip()
+    col = re.sub(r"\(Hourly\)$|\(Monthly\)$|\(TimeStep\)$|\(Daily\)$", "", col).strip()
+    return col
 
 
 def parse_csv(csv_path: Path) -> ParsedSimulationData:
@@ -54,10 +65,21 @@ def parse_csv(csv_path: Path) -> ParsedSimulationData:
 
 def _rename_columns(df: pd.DataFrame, raw_columns: list[str]) -> pd.DataFrame:
     rename_map = {}
+    zone_temp_cols = []
+
     for raw_col in raw_columns:
-        cleaned = raw_col.strip()
-        if cleaned in COLUMN_MAP:
-            rename_map[raw_col] = COLUMN_MAP[cleaned]
+        normalized = _normalize_column(raw_col)
+        if normalized in COLUMN_MAP:
+            target = COLUMN_MAP[normalized]
+            if target == "zone_mean_air_temp_c":
+                zone_temp_cols.append(raw_col)
+            elif target not in rename_map.values():
+                rename_map[raw_col] = target
+
+    if zone_temp_cols:
+        rename_map[zone_temp_cols[0]] = "zone_mean_air_temp_c"
+
+    logger.info("Matched %d columns: %s", len(rename_map), list(rename_map.values()))
     df = df.rename(columns=rename_map)
     return df
 
