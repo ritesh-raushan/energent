@@ -15,9 +15,9 @@ class EnergyPlusRunner:
     def _default_config(self) -> SimulationConfig:
         return SimulationConfig(
             energyplus_exe=Path(settings.ENERGYPLUS_EXE_PATH),
-            idf_path=Path(settings.SIMULATION_IDF_PATH),
-            weather_path=Path(settings.SIMULATION_WEATHER_PATH),
-            output_dir=Path(settings.ENERGYPLUS_WORK_DIR),
+            idf_path=Path(settings.ENERGYPLUS_IDF_PATH),
+            weather_path=Path(settings.ENERGYPLUS_WEATHER_PATH),
+            output_dir=Path(settings.ENERGYPLUS_OUTPUT_DIR),
         )
 
     def run(self) -> SimulationResult:
@@ -38,7 +38,7 @@ class EnergyPlusRunner:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=300,
+                timeout=settings.ENERGYPLUS_TIMEOUT,
             )
 
             csv_path = self._find_csv_output()
@@ -55,13 +55,13 @@ class EnergyPlusRunner:
             )
 
         except subprocess.TimeoutExpired:
-            logger.error("EnergyPlus simulation timed out after 300 seconds")
+            logger.error("EnergyPlus simulation timed out after %d seconds", settings.ENERGYPLUS_TIMEOUT)
             return SimulationResult(
                 success=False,
                 idf_path=self.config.idf_path,
                 weather_path=self.config.weather_path,
                 output_dir=self.config.output_dir,
-                stderr="Simulation timed out after 300 seconds",
+                stderr=f"Simulation timed out after {settings.ENERGYPLUS_TIMEOUT} seconds",
                 return_code=-1,
             )
         except FileNotFoundError:
